@@ -114,7 +114,7 @@ namespace Engrafo_1_Installer
             
             var lblScpHelp = new LinkLabel
             {
-                Text = "The directory you add is where you can add your SAS scaproc logs when Engrafo is running.\r\nSee Engrafo Guide",
+                Text = "The directory you add is where you can place metadata for Engrafo's Metadata API.\r\nSee Engrafo Guide",
                 AutoSize = true
             };
 

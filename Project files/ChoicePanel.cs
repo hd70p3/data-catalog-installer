@@ -15,6 +15,7 @@ namespace Engrafo_1_Installer
         private Label lblLocalDesc, lblDockerDesc;
         private LinkLabel lblChoiceWarning;
         private Button btnNext;
+        private LinkLabel lblLinks; 
 
         public ChoicePanel()
         {
@@ -89,7 +90,8 @@ namespace Engrafo_1_Installer
                 Text = "This will install Engrafo using a Docker image\r\n" +
            "You can choose a complete installation with download of a SQL Server " +
            "or use your own SQL database\r\n" +
-           "Docker Desktop must be running",
+           "! Docker Desktop must be running\r\n" +
+           "!! If you need Engrafo with integration to Active Directory you need to install Engrafo on a Windows server or desktop",
                 AutoSize = true,
                 MaximumSize = new Size(650, 0),
                 Margin = new Padding(indent, 0, 0, 0),
@@ -97,7 +99,6 @@ namespace Engrafo_1_Installer
             };
             tbl.Controls.Add(lblDockerDesc, 0, 4);
 
-            // ── Warning (indented)
             lblChoiceWarning = new LinkLabel
             {
                 AutoSize = true,
@@ -105,14 +106,14 @@ namespace Engrafo_1_Installer
                 ForeColor = Color.Black,
                 Margin = new Padding(indent, 40, 0, 0)
             };
+            // ── Warning (indented)
+            
             lblChoiceWarning.Text =
                 "Microsoft SQL Servers\r\n" +
                 "How to enable IIS on Windows\r\n" +
                 "Docker Desktop\r\n"+
                 "Complete quide to manual installation of Engrafo";
-
-
-
+            
             // Add links over the display text
             int sqlStart = lblChoiceWarning.Text.IndexOf("Microsoft SQL Servers");
             lblChoiceWarning.Links.Add(sqlStart, "Microsoft SQL Servers".Length, "https://www.microsoft.com/en-us/sql-server/sql-server-downloads\r\n");
@@ -125,6 +126,18 @@ namespace Engrafo_1_Installer
 
             int guideStart = lblChoiceWarning.Text.IndexOf("Complete quide to manual installation of Engrafo");
             lblChoiceWarning.Links.Add(guideStart-3, "Complete quide to manual installation of Engrafo".Length, "https://engrafo.atlassian.net/wiki/x/AQBDAQ");
+
+            
+            // ── Next button row (also aligned under indent)
+            btnNext = new Button
+            {
+                Text = "Next →",
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink
+            };
+            btnNext.Click += (s, e) => NextClicked?.Invoke(this, EventArgs.Empty);
+
+
 
             lblChoiceWarning.LinkClicked += (s, e) =>
             {
@@ -139,6 +152,7 @@ namespace Engrafo_1_Installer
                 AutoSizeMode = AutoSizeMode.GrowAndShrink
             };
             btnNext.Click += (s, e) => NextClicked?.Invoke(this, EventArgs.Empty);
+
 
             var flp = new FlowLayoutPanel
             {
