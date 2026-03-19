@@ -273,9 +273,10 @@ namespace Engrafo_1_Installer
             lblMessage.AppendText(
                 "Follow these steps to get started with Engrafo:\r\n" +
                 "1) Login to Engrafo with (user,password): admin@admin.com, EngrafoDemopw.1\r\n" +
-                "2) Get a license for Engrafo (you'll recieve a mail with license-file)\r\n" +
+                "2) Get a license for Engrafo (you'll recieve a mail with license-file. Trial is availeble)\r\n" +
                 "3) Upload the license in the license section of Engrafo\r\n" +
-                "4) Optional: Download sample data to test Engrafo's features. You can use the sample data for testing or upload your own metadata\r\n\r\n");
+                "4) Optional: Download sample data to test Engrafo's features. You can use the sample data for testing or upload your own metadata\r\n"+
+                "When using Docker SQL database, imported/created data will remain in a volume until deleted");
 
             btnLaunch.Visible = false;
             btnFinish.Visible = true;

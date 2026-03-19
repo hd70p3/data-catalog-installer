@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
@@ -15,12 +16,12 @@ namespace Engrafo_1_Installer
         private Button buttonBrowse, buttonDeploy, btnBack;
         private ProgressBar progressBar;
         private ToolTip _tip = new ToolTip();
-        
+
         public string AppPort => textBoxAppPort.Text.Trim();
         public string DirectoryPath => textBoxDirectory.Text.Trim();
 
         private TableLayoutPanel tbl;
-        
+
         private string ComposeFilePath =>
             Path.Combine(Directory.GetCurrentDirectory(), "docker-compose.yml");
 
@@ -111,10 +112,11 @@ namespace Engrafo_1_Installer
 
             tbl.Controls.Add(lblDirectory, 0, 4);
             tbl.Controls.Add(dirPanel, 1, 4);
-            
+
             var lblScpHelp = new LinkLabel
             {
-                Text = "The directory you add is where you can place metadata for Engrafo's Metadata API.\r\nSee Engrafo Guide",
+                Text = "The directory you add is where you can place metadata for Engrafo's Metadata API.\r\nSee Engrafo Guide \r\n" +
+                "\r\n\r\n! Deploying for the first time can take several minutes !",
                 AutoSize = true
             };
 
@@ -126,7 +128,7 @@ namespace Engrafo_1_Installer
             if (guideStart >= 0)
             {
                 lblScpHelp.Links.Clear();
-                lblScpHelp.Links.Add(guideStart, guideText.Length-1, "https://engrafo.atlassian.net/wiki/spaces/EDV/pages/303529995/Using+Engrafo+SAS+Analyzer");
+                lblScpHelp.Links.Add(guideStart, guideText.Length - 1, "https://engrafo.atlassian.net/wiki/spaces/EDV/pages/303529995/Using+Engrafo+SAS+Analyzer");
             }
 
             lblScpHelp.LinkClicked += (_, e) =>
@@ -136,8 +138,6 @@ namespace Engrafo_1_Installer
                     Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
                 }
             };
-
-
 
             // Progress bar row
             progressBar = new ProgressBar
@@ -274,8 +274,7 @@ namespace Engrafo_1_Installer
                 MessageBox.Show($"The port {appPort} is already in use by a running Docker container. Please choose another port.", "Port In Use (Docker)", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return;
             }
-            
-            
+
             if (string.IsNullOrWhiteSpace(textBoxDBPort.Text) ||
                 string.IsNullOrWhiteSpace(textBoxAppPort.Text) ||
                 string.IsNullOrWhiteSpace(textBoxDatabase.Text) ||
@@ -290,7 +289,7 @@ namespace Engrafo_1_Installer
                 MessageBox.Show("Docker not installed or not on PATH.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return;
             }
-            
+
             // Build connection string
             var connectionString =
                 $"Server=engrafo_db;Database={textBoxDatabase.Text.Trim()};User ID=sa;Password=yourStrong(!)Password;TrustServerCertificate=True;";
@@ -318,28 +317,26 @@ namespace Engrafo_1_Installer
 
             try
             {
-                await Task.Run(() =>
-                {
-                    var psi = new ProcessStartInfo("docker", "compose up -d")
-                    {
-                        WorkingDirectory = AppDomain.CurrentDomain.BaseDirectory,
-                        UseShellExecute = false,
-                        RedirectStandardOutput = true,
-                        RedirectStandardError = true,
-                        CreateNoWindow = true
-                    };
-                    using var proc = Process.Start(psi);
-                    if (proc == null) throw new Exception("Failed to start Docker");
-                    string o = proc.StandardOutput.ReadToEnd();
-                    string e2 = proc.StandardError.ReadToEnd();
-                    proc.WaitForExit();
-                    if (proc.ExitCode != 0) throw new Exception(o + "\n" + e2);
-                });
+                using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(10));
 
-                //MessageBox.Show(
-                //    "Installation complete! Open Engrafo at localhost:" + textBoxAppPort.Text.Trim(),
-                //    "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                var (exitCode, stdOut, stdErr) = await RunProcessAsync(
+                    fileName: "docker",
+                    arguments: "compose up -d",
+                    workingDirectory: AppDomain.CurrentDomain.BaseDirectory,
+                    cancellationToken: cts.Token).ConfigureAwait(true);
+
+                if (exitCode != 0)
+                    throw new Exception((stdOut + "\n" + stdErr).Trim());
+
                 DeployCompleted?.Invoke(this, EventArgs.Empty);
+            }
+            catch (OperationCanceledException)
+            {
+                MessageBox.Show(
+                    "Docker Compose is taking too long (image pull may be stuck). Please verify Docker Desktop is running and you can pull images, then try again.",
+                    "Timeout",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error);
             }
             catch (Exception ex)
             {
@@ -351,7 +348,48 @@ namespace Engrafo_1_Installer
                 buttonDeploy.Enabled = true;
             }
         }
-        
+
+        private static async Task<(int ExitCode, string StdOut, string StdErr)> RunProcessAsync(
+            string fileName,
+            string arguments,
+            string workingDirectory,
+            CancellationToken cancellationToken)
+        {
+            var psi = new ProcessStartInfo(fileName, arguments)
+            {
+                WorkingDirectory = workingDirectory,
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                CreateNoWindow = true
+            };
+
+            using var proc = Process.Start(psi) ?? throw new Exception("Failed to start process: " + fileName);
+
+            await using var _ = cancellationToken.Register(() =>
+            {
+                try
+                {
+                    if (!proc.HasExited)
+                        proc.Kill(entireProcessTree: true);
+                }
+                catch
+                {
+                    // ignored
+                }
+            });
+
+            var stdOutTask = proc.StandardOutput.ReadToEndAsync();
+            var stdErrTask = proc.StandardError.ReadToEndAsync();
+
+            await proc.WaitForExitAsync(cancellationToken).ConfigureAwait(false);
+
+            var stdOut = await stdOutTask.ConfigureAwait(false);
+            var stdErr = await stdErrTask.ConfigureAwait(false);
+
+            return (proc.ExitCode, stdOut, stdErr);
+        }
+
         private string ReadEmbeddedResource(string resourceFileName)
         {
             var asm = GetType().Assembly;
@@ -365,6 +403,7 @@ namespace Engrafo_1_Installer
             using (var reader = new StreamReader(stream))
                 return reader.ReadToEnd();
         }
+
         private bool IsPortInUse(int port)
         {
             try
@@ -380,7 +419,7 @@ namespace Engrafo_1_Installer
                 return true; // Port is in use
             }
         }
-        
+
         private bool IsPortInUseByDocker(int port)
         {
             try
@@ -410,7 +449,5 @@ namespace Engrafo_1_Installer
             catch { }
             return false;
         }
-
-        
     }
 }
