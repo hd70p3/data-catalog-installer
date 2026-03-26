@@ -15,7 +15,9 @@ Option 1) requires that you have Docker Desktop Running. Can be run on any platf
 
 Option 2) requires a running Internet Information Server(IIS) and a MS SQL Server. (If you want to use the AI models in Engrafo, you need to use a 2025 MSSQL Server) 
 
-If you need a binary installation version contact@engrafo.eu.
+If you need a ready-to-run installer you can download it here: 
+
+https://www.engrafo.eu/EngrafoVersions/Engrafo_1_Installer_datacatalog.zip
 
 ***What is Engrafo Data Catalog Solution...?***
 
@@ -69,12 +71,12 @@ SQL Server.
 
 Depending on your use case, Microsoft provides different SQL Server editions:
 
-- **SQL Server Developer Edition** – Free, but only for development and testing.
-- **SQL Server Express** – Free to use, but with feature and resource limitations.
-- **SQL Server Standard/Enterprise** – Requires a paid license for production use.
+- **SQL Server Developer Edition** â€“ Free, but only for development and testing.
+- **SQL Server Express** â€“ Free to use, but with feature and resource limitations.
+- **SQL Server Standard/Enterprise** â€“ Requires a paid license for production use.
 
 Using Docker the installer does **not** distribute SQL Server itself. The database image is
-downloaded directly from Microsoft’s container registry, and all usage is
+downloaded directly from Microsoftâ€™s container registry, and all usage is
 governed by Microsoft's End User License Agreement (EULA).
 
 For details, please refer to Microsoft's official SQL Server licensing terms.
